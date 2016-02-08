@@ -1,5 +1,5 @@
 # APAnti
-Garry's Mod (GMod) Anti Prop Minge Solution.
+Garry's Mod (GMod) Anti Prop Griefing Solution.
 
 
 Note: This version is currently untested if you are unsure about using it or are afraid to break things please use https://github.com/LuaTenshi/GLua/tree/master/APAnti
