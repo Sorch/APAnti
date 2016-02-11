@@ -127,8 +127,9 @@ local function SpawnFilter(ply, model)
 		local ent = not ply:IsPlayer() and ply or nil
 		local model = model and APA.ModelNameFix( model )
 
+		if ent then ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {} end
+
 		if IsValid(ent) then
-			if APA.Settings.M.Ghosting then ent.__APAPhysgunHeld = {} end
 			if APA.Settings.NoCollideVehicles:GetBool() and ent:IsVehicle() then ent:SetCollisionGroup(COLLISION_GROUP_WEAPON) return end
 		end
 	end)
@@ -165,7 +166,7 @@ hook.Add( "PhysgunDrop", "APANoThrow", function(ply,ent)
 		local phys = ent.GetPhysicsObject and ent:GetPhysicsObject() or nil 
 		if IsValid(phys) then phys:EnableMotion(false) end
 	end
-	if (IsValid(ply) and IsValid(ent)) and ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply) then
+	if (IsValid(ply) and IsValid(ent)) and ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply) and ent.__APAPhysgunHeld then
 		ent.__APAPhysgunHeld[tostring(ply:UniqueID())] = nil
 	end
 end)
