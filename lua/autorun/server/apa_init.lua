@@ -31,7 +31,7 @@ APA.Settings = {
 APA.Settings.L = {
 	Freeze = {"prop_physics", "gmod_button", "gmod_", "lawboard", "light", "lamp", "jail", "wire"},
 	Black  = {"prop_physics", "gmod_", "money", "printer", "cheque", "light", "lamp", "wheel", "playx", "radio", "lawboard", "fadmin", "jail", "prop", "wire"},
-	White  = {"npc", "weapon", "knife", "prop_combine_ball", "npc_tripmine", "npc_satchel"},
+	White  = {"player", "npc", "weapon", "knife", "grenade", "prop_combine_ball", "npc_tripmine", "npc_satchel", "prop_door_", "trigger_", "env_"},
 	Damage = { DMG_CRUSH, DMG_SLASH, DMG_CLUB, DMG_DIRECT, DMG_PHYSGUN, DMG_VEHICLE }
 }
 
