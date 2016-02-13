@@ -17,7 +17,7 @@ hook.Add("OnEntityCreated", "APAAntiCrash", function(ent)
 			if IsValid(phys) and ((pos and not inworld(pos)) or (physpos and not inworld(physpos)) or 
 				ent.GetClass and ent:GetClass() != "prop_ragdoll" and phys:HasGameFlag(FVPHYSICS_PENETRATING)) then
 				phys:SetVelocityInstantaneous(Vector(0,0,0))
-				phys:EnableMotion(false)
+				phys:Sleep()
 			end
 		end)
 	end
