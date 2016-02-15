@@ -1,7 +1,7 @@
 local APAWorldEnts = APAWorldEnts or {}
 local hook, table = hook, table
 
-if #APAWorldEnts <= 0 then timer.Simple(0, function() for _,v in next, ents.GetAll() do table.insert( APAWorldEnts, v ) end end) end
+if #APAWorldEnts <= 0 then timer.Simple(0.001, function() for _,v in next, ents.GetAll() do table.insert( APAWorldEnts, v ) end end) end
 
 function APA.EntityCheck( entClass )
 	local good, bad = false, false
@@ -23,6 +23,9 @@ function APA.EntityCheck( entClass )
 	return good, bad, entClass
 end
 
+function APA.isPlayer(ent) return IsValid(ent) and (ent.GetClass and ent:GetClass() == "player") or (ent.IsPlayer and ent:IsPlayer()) or false end
+local isPlayer = APA.isPlayer
+
 function APA.FindProp(attacker, inflictor)
 	if( attacker:IsPlayer() ) then attacker = inflictor end
 	return ( IsValid(attacker) and attacker.GetClass ) and attacker or nil
@@ -30,7 +33,7 @@ end
 
 function APA.WeaponCheck(attacker, inflictor)
 	local ent = APA.FindProp(attacker, inflictor)
-	if ent and IsValid(ent) and ((ent.IsPlayer and ent:IsPlayer()) or (ent.IsWeapon and ent:IsWeapon()) or (ent.IsNPC and ent:IsNPC())) then 
+	if ent and IsValid(ent) and (isPlayer(ent) or (ent.IsWeapon and ent:IsWeapon()) or (ent.IsNPC and ent:IsNPC())) then 
 		return true
 	end
 	return false
@@ -101,9 +104,6 @@ local function ModelFilter(mdl) -- Return true to block model.
 	if not mdl then return true end
 	-- Model Blocking Code Here --
 end
-
-function APA.isPlayer(ent) return IsValid(ent) and (ent.GetClass and ent:GetClass() == "player") or (ent.IsPlayer and ent:IsPlayer()) or false end
-local isPlayer = APA.isPlayer
 
 function APA.IsWorld( ent )
 	local iw = ent.IsWorld and ent:IsWorld()

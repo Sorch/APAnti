@@ -1,6 +1,5 @@
 if not APA.hasCPPI then return false end -- Must Have CPPI
 
-ents.APAGhosts = {}
 local table = table
 local APGhosts = {}
 
@@ -124,18 +123,16 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 					local canfreeze = ((unghost and freezeonunghost) or ghostfreeze) and subphys:IsMotionEnabled()
 					if (canfreeze and not nofreeze) or forcefreeze then subphys:EnableMotion(false) end
 
-					if unghost and !ent.APGhost and IsValid(subphys) then
-						subphys:SetVelocity( Vector(0,0,0) )
-						subphys:AddAngleVelocity( subphys:GetAngleVelocity() * -1 )
-						subphys:Sleep()
-						timer.Simple(0.001, function()
-							if unghost and ent.APGhost and IsValid(subphys) then
-								subphys:SetVelocity( Vector(0,0,0) )
-								subphys:AddAngleVelocity( subphys:GetAngleVelocity() * -1 )
-								subphys:Sleep()
-							end
-						end)
+					local function psleep(unghost,ent,subphys)
+						if unghost and !ent.APGhost and IsValid(subphys) then
+							subphys:SetVelocity( Vector(0,0,0) )
+							subphys:AddAngleVelocity( subphys:GetAngleVelocity() * -1 )
+							subphys:Sleep()
+						end
 					end
+
+					psleep(unghost,ent,subphys)
+					timer.Simple(0.001, function() psleep(unghost,ent,subphys) end)
 				end
 			end
 		end
@@ -155,7 +152,8 @@ function APA.GetGhosts()
 end
 
 function APA.IsSafeToGhost(ply,ent)
-	return (IsValid(ply) and IsValid(ent)) and ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply) and 
+	local good, bad, ugly = APA.EntityCheck(IsValid(ent) and ent.GetClass and ent:GetClass() or '')	
+	return (IsValid(ply) and IsValid(ent)) and (not good) and (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and 
 	not (ent:IsVehicle() or ent:IsWeapon() or ent:IsPlayer() or ent:IsNPC() or APA.IsWorld(ent)) and 
 	not (ent.GetClass and ent:GetClass() == "prop_ragdoll")
 end
