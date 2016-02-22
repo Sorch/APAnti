@@ -81,7 +81,7 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 			end
 
 			if ent.OldMaterial and ent.GetClass and string.find( string.lower(ent:GetClass()), "gmod_" ) or string.find( string.lower(ent:GetClass()), "wire_" ) then
-				ent:SetMaterial(ent.OldMaterial[0] or '')
+				ent:SetMaterial(ent.OldMaterial or '')
 			end
 			ent.OldMaterial = nil
 
@@ -98,7 +98,7 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 			ent:SetColor(Color(255, 255, 255, ent.OldColor.a - 70))
 
 			if ent.GetClass and string.find( string.lower(ent:GetClass()), "gmod_" ) or string.find( string.lower(ent:GetClass()), "wire_" ) then
-				ent.OldMaterial = ent.OldMaterial or {ent:GetMaterial()}
+				ent.OldMaterial = ent.OldMaterial or (ent.GetMaterial and ent:GetMaterial())
 				ent:SetMaterial("models/wireframe")
 			end
 
