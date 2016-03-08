@@ -187,7 +187,6 @@ hook.Add("PhysgunDrop", "APAntiDrop", function(ply,ent)
 end)
 
 local function DontPickupGhosts(ply,ent) if ent.APGhost then return false end end
-hook.Add("GravGunPickupAllowed","APADontPickupGhosts", DontPickupGhosts)
 hook.Add("CanPlayerUnfreeze","APADontPickupGhosts", DontPickupGhosts)
 hook.Add("AllowPlayerPickup","APADontPickupGhosts", DontPickupGhosts)
 
