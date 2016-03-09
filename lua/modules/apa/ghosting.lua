@@ -153,7 +153,7 @@ end
 
 function APA.IsSafeToGhost(ply,ent)
 	local good, bad, ugly = APA.EntityCheck(IsValid(ent) and ent.GetClass and ent:GetClass() or '')	
-	return (IsValid(ply) and IsValid(ent)) and (not good) and (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and 
+	return (IsValid(ply) and IsValid(ent)) and ((not good) or bad) and (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and 
 	not (ent:IsVehicle() or ent:IsWeapon() or ent:IsPlayer() or ent:IsNPC() or APA.IsWorld(ent)) and 
 	not (ent.GetClass and ent:GetClass() == "prop_ragdoll")
 end
@@ -170,7 +170,8 @@ hook.Add( "PhysgunPickup", "APAntiPickup", function(ply,ent)
 end)
 
 hook.Add("PhysgunDrop", "APAntiDrop", function(ply,ent)
-	if (IsValid(ent) and ent.__APAPhysgunHeld) and IsSafeToGhost(ply,ent) then
+	if IsValid(ent) and IsSafeToGhost(ply,ent) then
+		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		local puid = tostring(ply:UniqueID())
 		local freezing = (ent.GetPhysicsObject and IsValid(ent:GetPhysicsObject()) and !ent:GetPhysicsObject():IsMotionEnabled()) or APA.Settings.FreezeOnDrop:GetBool()
 		timer.Simple(freezing and 0 or 1, function()

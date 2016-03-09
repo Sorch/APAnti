@@ -24,13 +24,11 @@ APA.Settings = {
 	GhostFreeze				= {0, "Setting this to 1 will freeze ghosts."},
 	UnGhostPassive			= {0, "Setting this to 1 will passivly unghost props. (Disabled by default.) (Needs AntiPush.)"},
 	GhostsNoCollide			= {0, "Setting this to 1 will make ghosts nocollide with everything."},
-	--- AntiCrash ---
-	AntiCrash				= {0, "Setting this to 1 will enable the AntiCrash. (Disabled by default.) (Experimental.)"}
 }
 
 APA.Settings.L = {
 	Freeze = {"prop_physics", "gmod_button", "gmod_", "lawboard", "light", "lamp", "jail", "wire"},
-	Black  = {"prop_physics", "gmod_", "money", "printer", "cheque", "light", "lamp", "wheel", "playx", "radio", "lawboard", "fadmin", "jail", "prop", "wire"},
+	Black  = {"prop_physics", "gmod_", "money", "printer", "cheque", "light", "lamp", "wheel", "playx", "radio", "lawboard", "fadmin", "jail", "prop", "wire", "media"},
 	White  = {"player", "npc", "weapon", "knife", "grenade", "prop_combine_ball", "npc_tripmine", "npc_satchel", "prop_door_", "trigger_", "env_"},
 	Damage = { DMG_CRUSH, DMG_SLASH, DMG_CLUB, DMG_DIRECT, DMG_PHYSGUN, DMG_VEHICLE }
 }
