@@ -58,6 +58,14 @@ function APA.CheckGhost( ent )
 	return IsValid(ent)
 end
 
+local function psleep(unghost,ent,subphys)
+	if unghost and !ent.APGhost and IsValid(subphys) then
+		subphys:SetVelocity( Vector(0,0,0) )
+		subphys:AddAngleVelocity( subphys:GetAngleVelocity() * -1 )
+		subphys:Sleep()
+	end
+end
+
 function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 	if( IsValid(ent) and not APA.IsWorld( ent ) ) then
 		local collision = (collision or APA.Settings.GhostsNoCollide:GetBool()) and COLLISION_GROUP_WORLD or COLLISION_GROUP_WEAPON
@@ -122,15 +130,6 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 				if ( IsValid( subphys ) ) then
 					local canfreeze = ((unghost and freezeonunghost) or ghostfreeze) and subphys:IsMotionEnabled()
 					if (canfreeze and not nofreeze) or forcefreeze then subphys:EnableMotion(false) end
-
-					local function psleep(unghost,ent,subphys)
-						if unghost and !ent.APGhost and IsValid(subphys) then
-							subphys:SetVelocity( Vector(0,0,0) )
-							subphys:AddAngleVelocity( subphys:GetAngleVelocity() * -1 )
-							subphys:Sleep()
-						end
-					end
-
 					psleep(unghost,ent,subphys)
 					timer.Simple(0.001, function() psleep(unghost,ent,subphys) end)
 				end
@@ -159,10 +158,21 @@ function APA.IsSafeToGhost(ply,ent)
 end
 local IsSafeToGhost = APA.IsSafeToGhost
 
+local function CallGhost(ent, ghostoff, nofreeze)
+	for _,v in next, constraint.GetAllConstrainedEntities(ent) do
+		local valid = IsValid(v)
+		local phys = valid and v.GetPhysicsObject and v:GetPhysicsObject()
+
+		if valid and ent == v or ( v.OldCollisionGroup or v.APGhost ) or phys:IsMotionEnabled() then
+			APA.InitGhost(v, ghostoff, nofreeze)
+		end
+	end
+end
+
 hook.Add( "PhysgunPickup", "APAntiPickup", function(ply,ent)
 	if APA.Settings.AntiPush:GetBool() and IsSafeToGhost(ply,ent) then
 		local puid = tostring(ply:UniqueID())
-		for _,v in next, constraint.GetAllConstrainedEntities(ent) do APA.InitGhost(v, false, true) end
+		local pickup = CallGhost(ent, false, true)
 
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		ent.__APAPhysgunHeld[puid] = true
@@ -174,15 +184,15 @@ hook.Add("PhysgunDrop", "APAntiDrop", function(ply,ent)
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		local puid = tostring(ply:UniqueID())
 		local freezing = (ent.GetPhysicsObject and IsValid(ent:GetPhysicsObject()) and !ent:GetPhysicsObject():IsMotionEnabled()) or APA.Settings.FreezeOnDrop:GetBool()
+		
 		timer.Simple(freezing and 0 or 1, function()
 			if IsValid(ent) and ent.__APAPhysgunHeld then
 				if table.Count(ent.__APAPhysgunHeld) <= 0 then
-					for _,v in next, constraint.GetAllConstrainedEntities(ent) do 
-						APA.InitGhost(v, true, false)
-					end
+					CallGhost(ent, true, false)
 				end
 			end
 		end)
+
 		ent.__APAPhysgunHeld[puid] = nil
 	end
 end)

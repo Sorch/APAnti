@@ -14,7 +14,7 @@ function TOOL:LeftClick( trace )
 	if not IsValid( trace.Entity ) then return false end
 	
 	if APA and APA.InitGhost then
-		APA.InitGhost( trace.Entity, true, false )
+		APA.InitGhost( trace.Entity, true, true )
 	end
 	
 	return true
@@ -50,7 +50,7 @@ function TOOL:Reload( trace )
 				if v.GetClass and v:GetClass() == "prop_physics" then
 					timer.Simple(i/50, function()
 						if APA.FindOwner(v) == o then
-							APA.InitGhost( v, true, true )
+							APA.InitGhost( v, true, false )
 						end
 					end)
 				end
