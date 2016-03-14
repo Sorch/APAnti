@@ -55,10 +55,11 @@ local function DamageFilter( target, d ) -- d for damage info.
 
 		local blocked = table.HasValue(APA.Settings.L.Damage, type)
 
-		if blocked or bad or not good then
+		if blocked or bad or not good and not d:IsFallDamage() then
 			if APA.WeaponCheck(attacker, inflictor) then return end
 			if APA.Settings.BlockVehicleDamage:GetBool() and isvehicle then return true end
 			if APA.Settings.BlockExplosionDamage:GetBool() and isexplosion then return true end
+			if (not APA.Settings.BlockWorldDamage:GetBool()) and inflictor == 'worldspawn' then return true end
 			if APA.Settings.AntiPK:GetBool() and not isvehicle and not isexplosion then 
 				d:SetDamage(0) d:ScaleDamage(0) d:SetDamageForce(Vector(0,0,0))
 

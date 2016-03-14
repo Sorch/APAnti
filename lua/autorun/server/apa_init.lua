@@ -7,6 +7,7 @@ APA.Settings = {
 	PhysgunNerf 			= {1, "Setting this to 1 will limit the physgun speed."},
 	BlockVehicleDamage 		= {1, "Setting this to 1 will stop vehicle damage."},
 	BlockExplosionDamage 	= {1, "Setting this to 1 will block explosion damage."},
+	BlockWorldDamage 		= {1, "Setting this to 1 will block world damage."},
 	--- Prop Control ---
 	UnbreakableProps 		= {0, "Setting this to 1 will make props unbreakable. (Disabled by default.)"},
 	NoCollideVehicles 		= {1, "Setting this to 1 will make vehicles not collide with players."},
