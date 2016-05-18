@@ -32,9 +32,10 @@ function APA.FindProp(attacker, inflictor)
 end
 
 function APA.WeaponCheck(attacker, inflictor)
-	local ent = APA.FindProp(attacker, inflictor)
-	if ent and IsValid(ent) and (isPlayer(ent) or (ent.IsWeapon and ent:IsWeapon()) or (ent.IsNPC and ent:IsNPC())) then 
-		return true
+	for _,ent in next, {attacker, inflictor} do
+		if ent and IsValid(ent) and (isPlayer(ent) or (ent.IsWeapon and ent:IsWeapon()) or (ent.IsNPC and ent:IsNPC())) then 
+			return true
+		end
 	end
 	return false
 end
@@ -56,7 +57,7 @@ local function DamageFilter( target, d ) -- d for damage info.
 
 		local blocked = table.HasValue(APA.Settings.L.Damage, type)
 
-		if blocked or (bad and not good) and not d:IsFallDamage() then
+		if (blocked or bad) and not (good or d:IsFallDamage()) then
 			if APA.WeaponCheck(attacker, inflictor) then return end
 			if APA.Settings.BlockVehicleDamage:GetBool() and isvehicle then return true end
 			if APA.Settings.BlockExplosionDamage:GetBool() and isexplosion then return true end
@@ -65,12 +66,17 @@ local function DamageFilter( target, d ) -- d for damage info.
 				d:SetDamage(0) d:ScaleDamage(0) d:SetDamageForce(Vector(0,0,0))
 
 				if APA.Settings.FreezeOnHit:GetBool() then
-					if damage >= 15 then
-						if not v:IsPlayer() then
-							local phys = IsValid(v) and v:GetPhysicsObject()
-							if IsValid(phys) then phys:EnableMotion(false) end
+					if damage >= 10 then
+						local phys = IsValid(v) and v:GetPhysicsObject()
+						if IsValid(phys) then
+							phys:SetVelocityInstantaneous(Vector(0,0,0))
+							phys:Sleep()
+							if not v:IsPlayer() then
+								phys:EnableMotion(false)
+							else
+								phys:Wake()
+							end
 						end
-						if target:IsPlayer() then target:SetVelocity(target:GetVelocity()*-1) end
 					end
 				end
 
