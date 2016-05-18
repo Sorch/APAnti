@@ -52,22 +52,3 @@ Note: This now comes with a tool for unghosting props without having to physgun 
     apa_ghostsnocollide		 = 0, "setting this to 1 will make ghosts nocollide with everything.",
     --- AntiCrash ---
     apa_anticrash			 = 0, "setting this to 1 will enable the anticrash. (disabled by default.) (experimental.)"
-# AntiCrash Plugin Commands
-Note: The AntiCrash was created by [Kefta](https://github.com/Kefta/) and has its own [Github Page](https://github.com/Kefta/Entity-Crash-Catcher)
-
-    Command = Default Value : Description
-    
-    -- Notifications --
-    apa_anticrash_echofreeze 	 = 0, "tell players when a entity is frozen.",
-    apa_anticrash_echoremove 	 = 1, "tell players when a entity is removed.",
-    -- Speed --
-    apa_anticrash_freezespeed	 = 2000, "Velocity ragdoll is frozen at; make greater than RemoveSpeed if you want to disable freezing.",
-    apa_anticrash_removespeed 	 = 4000, "Velocity ragdoll is removed at.",
-    -- Delays --
-    apa_anticrash_freezetime 	 = 1, "time body is frozen for.",
-    apa_anticrash_thinkdelay 	 = 0, "how often the server should check for bad ragdolls; change to 0 to run every think.",
-    -- Check For --
-    apa_anticrash_effectplayers	 = 0, "check player velocity.",
-    apa_anticrash_velocityhook 	 = 1, "check entities for unreasonable velocity.",
-    apa_anticrash_unreasonablehook  = 1, "check entities for unreasonable angles/positions.",
-    apa_anticrash_massunfreeze	 = 0, "check if lots of entities are being unfrozen in an area and put them to sleep."
