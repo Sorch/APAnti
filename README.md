@@ -1,5 +1,8 @@
 # APAnti
-Garry's Mod (GMod) Anti Prop Griefing Solution.
+Garry's Mod (GMod) Anti Prop Griefing Solution. (Test Build!)
+
+Remember that this is the TEST build, expect things to break. **Be ready to report any issues.**<br/>
+Update Notes: https://github.com/LuaTenshi/APAnti/commit/ceffc4e78f2f8e2f03e078a816d80433359a2164
 
 
 Note: This version is currently untested if you are unsure about using it or are afraid to break things please use https://github.com/LuaTenshi/GLua/tree/master/APAnti
