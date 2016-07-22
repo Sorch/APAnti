@@ -1,7 +1,7 @@
-if not APA.hasCPPI then return false end -- Must Have CPPI
+if (not APA.hasCPPI) or (not APA.FindOwner) then return false end -- Must Have CPPI
 
-local table = table
 local APGhosts = {}
+local hook, table, ents, timer, IsValid = hook, table, ents, timer, IsValid
 
 function APA.GhostIsTrap(ent)
 	local mins, maxs, check = ent:OBBMins(), ent:OBBMaxs(), false
@@ -16,8 +16,8 @@ function APA.GhostIsTrap(ent)
 	check = APA.isPlayer(trace.Entity) and trace.Entity or false
 
 	if check then return check end
-
 	local pos = ent and ent:GetPos()
+
 	tr = {
 		start = pos, 
 		endpos = pos, 
@@ -31,9 +31,7 @@ function APA.GhostIsTrap(ent)
 
 	if check then return check end
 
-	local cube = ents.FindInBox( ent:LocalToWorld(mins), ent:LocalToWorld(maxs) )
-
-	for _,v in pairs(cube) do
+	for _,v in pairs(ents.FindInBox( ent:LocalToWorld(mins), ent:LocalToWorld(maxs) )) do
 		if APA.isPlayer(v) or (v.IsNPC and v:IsNPC()) or (v.IsBot and v:IsBot()) then
 			if not ent.APAIsObscured then
 				ent.APAIsObscured = v
@@ -74,13 +72,16 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 		local unghost = ghostoff and APA.CheckGhost(ent) or false
 
 		if ent.ForcePlayerDrop and ent.FPPAntiSpamIsGhosted then 
-			DropEntityIfHeld(ent) ent:ForcePlayerDrop()
-			timer.Simple(0, function()
-				if ent.ForcePlayerDrop then
+			DropEntityIfHeld(ent)
+			ent:ForcePlayerDrop()
+			
+			timer.Simple(0.001, function()
+				if IsValid(ent) then
 					DropEntityIfHeld(ent)
 					ent:ForcePlayerDrop()
 				end
 			end)
+			
 			unghost = false
 		end
 
@@ -134,17 +135,19 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 		if antipush then
 			for _,x in next, constraint.GetAllConstrainedEntities(ent) do
 				for _,v in next, (x.__APAPhysgunHeld or {}) do 
-					if v then nofreeze = true break end 
+					if v then nofreeze = true break end
 				end
 			end
 
 			for i = 0, ent:GetPhysicsObjectCount() - 1 do
 				local subphys = ent:GetPhysicsObjectNum( i )
-				if ( IsValid( subphys ) ) then
-					local canfreeze = ((unghost and freezeonunghost) or ghostfreeze) and subphys:IsMotionEnabled()
-					if (canfreeze and not nofreeze) or forcefreeze then subphys:EnableMotion(false) end
-					psleep(unghost,ent,subphys)   timer.Simple(0.001, function() psleep(unghost,ent,subphys) end)
-				end
+				timer.Simple(i/1000,function()
+					if ( IsValid( subphys ) ) then
+						local canfreeze = ((unghost and freezeonunghost) or ghostfreeze) and subphys:IsMotionEnabled()
+						if (canfreeze and not nofreeze) or forcefreeze then subphys:EnableMotion(false) end
+						psleep(unghost,ent,subphys)   timer.Simple(0.001, function() psleep(unghost,ent,subphys) end)
+					end
+				end)
 			end
 		end
 
@@ -162,22 +165,22 @@ function APA.GetGhosts()
 	return APGhosts or {}
 end
 
-function APA.IsSafeToGhost(p,e)
+function APA.IsSafeToGhost(p,ent)
 	if not p then return end
 
-	local good, bad, ugly = APA.EntityCheck(IsValid(ent) and ent.GetClass and ent:GetClass() or '')
 	local ply = (IsValid(p) and (p.IsPlayer and p:IsPlayer())) and p or nil
-	local ent = IsValid(p) and not ply and p or e
+	local ent = IsValid(p) and not ply and p or ent
+
+	local good, bad, ugly = APA.EntityCheck(IsValid(ent) and ent.GetClass and ent:GetClass() or '')
+	bad = APA.Settings.Method:GetBool() and bad or APA.IsEntBad(v)
 
 	if ply and ent then
 		ent = (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and ent or nil
 	end
 
-	ent = IsValid(ent) and ((not good) or bad) and
-	not (ent:IsVehicle() or ent:IsWeapon() or ent:IsPlayer() or ent:IsNPC() or APA.IsWorld(ent)) and 
-	not (ent.GetClass and ent:GetClass() == "prop_ragdoll")
-
-	return ent
+	return IsValid(ent) and ((not good) and bad) and
+	not (ent:IsVehicle() or ent:IsWeapon() or APA.IsWorld(ent)) and 
+	not (ent.GetClass and ent:GetClass() == "prop_ragdoll") and true or false
 end
 
 local IsSafeToGhost = APA.IsSafeToGhost
@@ -211,7 +214,7 @@ hook.Add("PhysgunDrop", "APAntiDrop", function(ply,ent)
 		
 		timer.Simple(freezing and 0 or 1, function()
 			if IsValid(ent) and ent.__APAPhysgunHeld then
-				if table.Count(ent.__APAPhysgunHeld) <= 0 then
+				if next(v.__APAPhysgunHeld) == nil then
 					CallGhost(ent, true, false)
 				end
 			end
@@ -232,7 +235,7 @@ timer.Create("APAUnGhostPassive", 1.23, 0, function()
 		if IsValid(v) and v.APGhost then
 			i = i + 1
 			timer.Simple(i/100, function()
-				if IsValid(v) and table.Count(v.__APAPhysgunHeld or {}) == 0 and v.APGhost and IsSafeToGhost(v) then
+				if IsValid(v) and next(v.__APAPhysgunHeld) == nil and v.APGhost and IsSafeToGhost(v) then
 					APA.InitGhost(v, true, false)
 				end
 			end)
