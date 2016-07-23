@@ -171,8 +171,8 @@ function APA.IsSafeToGhost(p,ent)
 	local ply = (IsValid(p) and (p.IsPlayer and p:IsPlayer())) and p or nil
 	local ent = IsValid(p) and not ply and p or ent
 
-	local good, bad, ugly = APA.EntityCheck(IsValid(ent) and ent.GetClass and ent:GetClass() or '')
-	bad = APA.Settings.Method:GetBool() and bad or APA.IsEntBad(v)
+	local good, bad, ugly = APA.EntityCheck( (IsValid(ent) and ent.GetClass) and ent:GetClass() or '' )
+	bad = APA.Settings.Method:GetBool() and bad or APA.IsEntBad(ent)
 
 	if ply and ent then
 		ent = (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and ent or nil
@@ -186,18 +186,25 @@ end
 local IsSafeToGhost = APA.IsSafeToGhost
 
 local function CallGhost(ent, ghostoff, nofreeze)
+	local i = 0
 	for _,v in next, constraint.GetAllConstrainedEntities(ent) do
-		local valid = IsValid(v)
-		local phys = valid and v.GetPhysicsObject and v:GetPhysicsObject()
+		timer.Simple(i/100, function()
+			local valid = IsValid(v)
+			local phys = valid and v.GetPhysicsObject and v:GetPhysicsObject()
 
-		if valid and ent == v or ( v.OldCollisionGroup or v.APGhost ) or phys:IsMotionEnabled() then
-			APA.InitGhost(v, ghostoff, nofreeze)
-		end
+			if valid and ent == v or ( v.OldCollisionGroup or v.APGhost ) or phys:IsMotionEnabled() then
+				APA.InitGhost(v, ghostoff, nofreeze)
+			end
+		end)
+		i = i + 1
 	end
 end
 
 hook.Add( "PhysgunPickup", "APAntiPickup", function(ply,ent)
-	if APA.Settings.AntiPush:GetBool() and IsSafeToGhost(ply,ent) then
+	if APA.Settings.AntiPush:GetBool() then
+		if not APA.Settings.Method:GetBool() and not ent.PhysgunDisabled then APA.SetBadEnt(ent,true) end
+		if not IsSafeToGhost(ply,ent) then return end
+
 		local puid = tostring(ply:UniqueID())
 		local pickup = CallGhost(ent, false, true)
 
@@ -214,7 +221,7 @@ hook.Add("PhysgunDrop", "APAntiDrop", function(ply,ent)
 		
 		timer.Simple(freezing and 0 or 1, function()
 			if IsValid(ent) and ent.__APAPhysgunHeld then
-				if next(v.__APAPhysgunHeld) == nil then
+				if next(ent.__APAPhysgunHeld) == nil then
 					CallGhost(ent, true, false)
 				end
 			end
@@ -246,8 +253,16 @@ end)
 hook.Add( "OnEntityCreated", "APAntiGhostSpawn", function(ent)
 	timer.Simple(0, function()
 		local ply = APA.FindOwner(ent)
-		if APA.Settings.GhostSpawn:GetBool() and IsValid(ply) and IsSafeToGhost(ply,ent) then
-			APA.InitGhost(ent, false, false, true, true)
+		if APA.Settings.GhostSpawn:GetBool() and IsValid(ply) then
+
+			if not APA.Settings.Method:GetBool() then
+				APA.SetBadEnt(ent,true)
+			end
+
+			if IsSafeToGhost(ply,ent) then
+				APA.InitGhost(ent, false, false, true, true)
+			end
+
 		end
 	end)
 end)

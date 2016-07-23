@@ -167,10 +167,14 @@ function APA.SetBadEnt(ent,bool)
 	local phys = IsValid(ent) and ent:GetPhysicsObject()
 	if bool then
 		log('[BadEntity]',ent,' is now a BAD entity!') if APA.Settings.Debug:GetInt() > 0 then ent:SetColor(Color(255,0,0)) end
+
+		ent:SetNWBool("APABadEntity", true)
+
 		ent.APAt = ent.APAt or {}
 		ent.APAt["block entity"] = true
 		ent.APAt["time stamp"] = (not ent.APAt["time stamp"]) and CurTime()+((APA.Settings.BadTime:GetFloat() >= 0.15 and APA.Settings.BadTime:GetFloat() or 0.15)) or ent.APAt["time stamp"]
 		log('[BadEntity]','Wait Time',Vector(0,0,(ent.APAt["time stamp"] or 0)):Distance(Vector(0,0,CurTime() or 0)),'seconds')
+
 		ent.APAt.Think = function()
 			if tonumber(ent.APAt["time stamp"] or 0) < CurTime() and next(ent.__APAPhysgunHeld) == nil then
 				local phys = IsValid(ent) and ent:GetPhysicsObject()
@@ -221,7 +225,10 @@ function APA.SetBadEnt(ent,bool)
  		end
 	elseif ent and ent.APAt and type(ent.APAt) == 'table' then
 		log('[BadEntity]',ent,' is now a GOOD entity!') if APA.Settings.Debug:GetInt() > 0 then ent:SetColor(Color(255,255,255)) end
+		
 		ent.APAt = nil
+		ent:SetNWBool("APABadEntity", false)
+
 		timer.Simple(3, function() if IsValid(ent) then ent.APANoPhysgun = nil end end)
 		table.RemoveByValue(APABadEnts, ent)
 	end
@@ -229,6 +236,7 @@ end
 
 function APA.IsEntBad(ent)
 	if ent and ent.APAt then return ent.APAt["block entity"] end
+	return ent:GetNWBool("APABadEntity", false)
 end
 
 timer.Create("APABaddieFinder", 0.33, 0, function() 
@@ -274,26 +282,24 @@ function APA.IsWorld( ent )
 end
 
 local function SpawnFilter(ply, model)
-	timer.Simple(0, function()
-		local ent = not ply:IsPlayer() and ply or nil
-		local model = model and APA.ModelNameFix( model )
+	local ent = not ply:IsPlayer() and ply or nil
+	local model = model and APA.ModelNameFix( model )
 
-		if ent then 
-			ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
-			
-			if not APA.IsWorld( ent ) then
-				if not APA.Settings.Method:GetBool() then APA.SetBadEnt(ent,true) end
-				if APA.Settings.MaxMass:GetInt() >= 1 then
-					local phys = IsValid(ent) and ent:GetPhysicsObject()
-					if IsValid(phys) and phys:GetMass() > APA.Settings.MaxMass:GetInt() then phys:SetMass(APA.Settings.MaxMass:GetInt()) end
-				end
+	if ent then 
+		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
+		
+		if not APA.IsWorld( ent ) then
+			if not APA.Settings.Method:GetBool() then APA.SetBadEnt(ent,true) end
+			if APA.Settings.MaxMass:GetInt() >= 1 then
+				local phys = IsValid(ent) and ent:GetPhysicsObject()
+				if IsValid(phys) and phys:GetMass() > APA.Settings.MaxMass:GetInt() then phys:SetMass(APA.Settings.MaxMass:GetInt()) end
 			end
 		end
+	end
 
-		if IsValid(ent) then
-			if APA.Settings.NoCollideVehicles:GetBool() and ent:IsVehicle() then ent:SetCollisionGroup(COLLISION_GROUP_WEAPON) return end
-		end
-	end)
+	if IsValid(ent) then
+		if APA.Settings.NoCollideVehicles:GetBool() and ent:IsVehicle() then ent:SetCollisionGroup(COLLISION_GROUP_WEAPON) return end
+	end
 end
 hook.Add( "OnEntityCreated", "APAntiSpawns", SpawnFilter)
 
