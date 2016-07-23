@@ -1,5 +1,6 @@
 if not SERVER then return end if CLIENT then return end
 APA = (APA and APA.Settings) and APA or {Settings = {}} -- Do not remove.
+local defaults = defaults or {}
 
 APA.Settings = {
 	--- Base AntiPK ---
@@ -28,7 +29,7 @@ APA.Settings = {
 	FreezeOnUnghost			= {1, "Setting this to 1 will freeze props when they unghost."},
 	FreezePassive			= {0, "Setting this to 1 will freeze props passivly."},
 	--- Ghosting ---
-	AntiPush 				= {0, "Setting this to 1 will enable Anti Prop Push (Ghosting)."},
+	GhostPickup 			= {0, "Setting this to 1 will enable ghost props on pickup."},
 	GhostSpawn				= {0, "Setting this to 1 will enable ghosting on spawn."},
 	GhostFreeze				= {0, "Setting this to 1 will freeze ghosts."},
 	UnGhostPassive			= {0, "Setting this to 1 will passivly unghost props. (Needs AntiPush.)"},
@@ -55,6 +56,7 @@ APA.Settings.M = APA.Settings.M or {}
 for k,v in next, APA.Settings do -- Build Cvars.
 	if k ~= 'L' and k ~= 'M' then
 		APA.Settings[k] = CreateConVar(string.lower("apa_"..tostring(k)), v[1], {FCVAR_DEMO, FCVAR_GAMEDLL, FCVAR_SERVER_CAN_EXECUTE, FCVAR_NOTIFY}, v[2])
+		defaults[k] = {string.Replace(tostring(v[1]), ".00", ""), v[2]}
 	end
 end
 
@@ -152,3 +154,28 @@ function APA.Notify(ply, str, ctype, time, alert, moreinfo)
 		net.WriteTable(moreinfo)
 	net.Send(ply)
 end
+
+local shortcut_help = [[
+APAnti Shortcut Commands
+
+"apa help" 		= Info about all commands.
+"apa nolag" 	= Quickly freeze all entities.
+"apa default" 	= Restore defaults.
+]]
+
+concommand.Add("apa", function( ply, cmd, _, argStr )
+	if argStr == "help" then
+		print("Help and update notes can be found here...","https://github.com/LuaTenshi/APAnti/blob/TEST/README.md")
+	elseif argStr == "nolag" then
+		APA.NoLag()
+		print('[APA] Freezing entities...')
+	elseif argStr == "default" then
+		for k,v in next, defaults do
+			RunConsoleCommand("apa_"..k,v[1])
+		end
+	else
+		print(shortcut_help)
+	end
+end, 
+function() return {"apa help", "apa nolag", "apa default"} end, shortcut_help, 
+{FCVAR_DEMO, FCVAR_GAMEDLL, FCVAR_SERVER_CAN_EXECUTE})

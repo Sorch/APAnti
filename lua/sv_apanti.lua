@@ -344,22 +344,25 @@ hook.Add( "PhysgunDrop", "APANoThrow", function(ply,ent)
 	end
 end)
 
-timer.Create("APAFreezePassive", 2.1, 0, function()
-	if not APA.Settings.FreezePassive:GetBool() then return end
+
+function APA.NoLag()
+	local k = 0
 	for _,v in next, ents.GetAll() do
 		if IsValid(v) and v.GetClass and table.HasValue(APA.Settings.L.Freeze, string.lower(v:GetClass())) then
-			if not next(v.__APAPhysgunHeld) == nil then
-				local k = 0
-				for _,v in next, constraint.GetAllConstrainedEntities(v) do
-					timer.Simple(k/100,function() -- Prevent possible crashes or lag on freeze sweep.
-						local v = v:GetPhysicsObject()
-						if IsValid(v) then v:EnableMotion(false) end
-					end)
-					k = k + 1
-				end
+			if next(v.__APAPhysgunHeld) == nil then
+				timer.Simple(k/100,function() -- Prevent possible crashes or lag on freeze sweep.
+					local v = v:GetPhysicsObject()
+					if IsValid(v) then v:EnableMotion(false) end
+				end)
+				k = k + 1
 			end
 		end
 	end
+end
+
+timer.Create("APAFreezePassive", 2.1, 0, function()
+	if not APA.Settings.FreezePassive:GetBool() then return end
+	APA.NoLag()
 end)
 
 hook.Add( "OnPhysgunReload", "APAMassUnfreeze", function(gun,ply)
