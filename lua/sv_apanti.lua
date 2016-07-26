@@ -73,6 +73,7 @@ function APA.physStop(phys)
 		end
 	end
 end
+local physStop = APA.physStop
 
 local function DamageFilter( target, d ) -- d for damage info.
 	local attacker, inflictor, damage, type = d:GetAttacker(), d:GetInflictor(), d:GetDamage(), d:GetDamageType()
@@ -87,7 +88,8 @@ local function DamageFilter( target, d ) -- d for damage info.
 	for _,v in next, dents do
 		local propdmg = (v.GetClass and (string.find(string.lower(v:GetClass()), "prop_") == 1))
 		local good, bad, ugly = APA.EntityCheck( (IsValid(v) and v.GetClass) and v:GetClass() or '' )
-		bad = APA.Settings.Method:GetBool() and bad or (APA.IsEntBad and APA.IsEntBad(v) or bad)
+
+		bad = APA.Settings.Method:GetBool() and bad or (APA.IsEntBad and APA.IsEntBad(v))
 
 		if APA.hasCPPI and APA.Settings.KillOwnership and propdmg and isPlayer(APA.FindOwner(v)) then
 			d:SetAttacker(APA.FindOwner(v))
@@ -98,9 +100,12 @@ local function DamageFilter( target, d ) -- d for damage info.
 			if not bad then good = true end
 		end
 
+		if v.APAForceBlock then bad = true end
+
 		log('[Damage]1) Checking Entity',v,'Is Vehicle: '..tostring(isvehicle),'Is Explosion: '..tostring(isexplosion))
 		log('[Damage]2) Checking Entity',v,'Is Bad: '..tostring(bad),'Is Prop Damage: '..tostring(propdmg))
 		log('[Damage]3) Checking Entity',v,'Is Good: '..tostring(good),'Is Fall: '..tostring(d:IsFallDamage()))
+		log('[Damage]4) Checking Entity',v,'Is Flagged:',v:GetNWBool("APABadEntity", false))
 
 		if (bad or (APA.Settings.BlockPropDamage:GetBool() and propdmg)) and not (good or d:IsFallDamage()) then
 			if APA.WeaponCheck(attacker, inflictor) then return end
@@ -110,7 +115,7 @@ local function DamageFilter( target, d ) -- d for damage info.
 			if APA.Settings.AntiPK:GetBool() and not isvehicle and not isexplosion then 
 				d:SetDamage(0) d:ScaleDamage(0) d:SetDamageForce(Vector(0,0,0))
 
-				if APA.Settings.FreezeOnHit:GetBool() then
+				if APA.Settings.FreezeOnHit:GetBool() or v.APAForceFreeze then
 					if damage >= 10 then
 						local phys = IsValid(v) and v:GetPhysicsObject()
 						if IsValid(phys) then
@@ -129,6 +134,11 @@ local function DamageFilter( target, d ) -- d for damage info.
 									physStop(target)
 								end 
 							end)
+
+							if (v.APAForceFreeze and v.APAForceFreeze >= 2) and not APA.Settings.FreezeOnHit:GetBool() then 
+								phys:EnableMotion(true)
+								phys:Sleep()
+							end
 						end
 					end
 				end
@@ -150,8 +160,6 @@ hook.Add( "PlayerSpawnedProp", "APAntiExplode", function( _, _, prop )
 	end
 end)
 
-if not APA.hasCPPI then error('[APA] CPPI not found, APAnti will be heavily limited.') return end
-
 hook.Add("StartCommand", "APAStartCmd", function(ply, mv)
 	if isPlayer(ply) and ply:GetEyeTrace().Entity.APANoPhysgun and ply:GetEyeTrace().Entity.APANoPhysgun > CurTime() then
 		local ent = ply:GetEyeTrace().Entity
@@ -161,6 +169,9 @@ hook.Add("StartCommand", "APAStartCmd", function(ply, mv)
 		mv:SetButtons(bit.band(mv:GetButtons(),bit.bnot(IN_ATTACK)))
 	end
 end)
+
+if not APA.hasCPPI then error('[APA] CPPI not found, APAnti will be heavily limited.') return end
+
 
 function APA.FindOwner( ent )
 	local owner, _ = ent:CPPIGetOwner()
@@ -179,6 +190,7 @@ end
 
 function APA.IsWorld( ent )
 	local iw = ent.IsWorld and ent:IsWorld()
+	
 	if (not APA.FindOwner(ent)) or (not (IsValid(ent) or iw)) or (not ent.GetClass) or ent.NoDeleting or ent.jailWall or isPlayer(ent) or
 		(ent.IsNPC and ent:IsNPC()) or (ent.IsBot and ent:IsBot()) or ent.PhysgunDisabled or ( ent.CreatedByMap and ent:CreatedByMap() ) or
 		(ent.GetPersistent and ent:GetPersistent()) or table.HasValue(APAWorldEnts, ent) then return true end
