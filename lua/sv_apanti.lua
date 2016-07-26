@@ -4,7 +4,7 @@ local tostring = tostring
 
 if #APAWorldEnts <= 0 then timer.Simple(0.001, function() for _,v in next, ents.GetAll() do table.insert( APAWorldEnts, v ) end end) end
 
-local function log(tag,...)
+function APA.log(tag,...)
 	if APA.Settings.Debug:GetInt() <= 0 then return end
 
 	local str = tostring(os.date("%H:%M"))..'| [APA-DEBUG]'..tostring(tag)
@@ -13,6 +13,7 @@ local function log(tag,...)
 		ServerLog(str,...)
 	end
 end
+local log = APA.log
 
 function APA.EntityCheck( entClass )
 	local good, bad = false, false
@@ -55,9 +56,7 @@ function APA.WeaponCheck(attacker, inflictor)
 	return false
 end
 
-local APABadEnts = APABadEnts or {}
-
-local function physStop(phys)
+function APA.physStop(phys)
 	if phys == NULL or not IsValid(phys) then return false end
 
 	if type(phys) == "PhysObj" then
@@ -88,7 +87,7 @@ local function DamageFilter( target, d ) -- d for damage info.
 	for _,v in next, dents do
 		local propdmg = (v.GetClass and (string.find(string.lower(v:GetClass()), "prop_") == 1))
 		local good, bad, ugly = APA.EntityCheck( (IsValid(v) and v.GetClass) and v:GetClass() or '' )
-		bad = APA.Settings.Method:GetBool() and bad or APA.IsEntBad(v)
+		bad = APA.Settings.Method:GetBool() and bad or (APA.IsEntBad and APA.IsEntBad(v) or bad)
 
 		if APA.hasCPPI and APA.Settings.KillOwnership and propdmg and isPlayer(APA.FindOwner(v)) then
 			d:SetAttacker(APA.FindOwner(v))
@@ -163,92 +162,6 @@ hook.Add("StartCommand", "APAStartCmd", function(ply, mv)
 	end
 end)
 
-function APA.SetBadEnt(ent,bool)
-	local phys = IsValid(ent) and ent:GetPhysicsObject()
-	if bool then
-		log('[BadEntity]',ent,' is now a BAD entity!') if APA.Settings.Debug:GetInt() > 0 then ent:SetColor(Color(255,0,0)) end
-
-		ent:SetNWBool("APABadEntity", true)
-
-		ent.APAt = ent.APAt or {}
-		ent.APAt["block entity"] = true
-		ent.APAt["time stamp"] = (not ent.APAt["time stamp"]) and CurTime()+((APA.Settings.BadTime:GetFloat() >= 0.15 and APA.Settings.BadTime:GetFloat() or 0.15)) or ent.APAt["time stamp"]
-		log('[BadEntity]','Wait Time',Vector(0,0,(ent.APAt["time stamp"] or 0)):Distance(Vector(0,0,CurTime() or 0)),'seconds')
-
-		ent.APAt.Think = function()
-			if tonumber(ent.APAt["time stamp"] or 0) < CurTime() and next(ent.__APAPhysgunHeld) == nil then
-				local phys = IsValid(ent) and ent:GetPhysicsObject()
-				if IsValid(phys) then
-					if phys:GetVelocity():Length() <= 0.001 then
-						phys:SetVelocityInstantaneous(Vector(0,0,0))
-						phys:AddAngleVelocity(phys:GetAngleVelocity()*-1)
-						APA.SetBadEnt(ent,false)
-					end
-				end
-			end
-		end
-
-		ent.APAtCallback = function(ent, c)
-			if APA.Settings.AnnoySurf:GetBool() and IsValid(ent) and ent.APAt and type(ent.APAt) == "table" then
-				if isPlayer(c.HitEntity) then
-					ent.APAt["time stamp"] = CurTime()+0.15
-					ent.APANoPhysgun = (not ent.APANoPhysgun) and CurTime()+0.55 or ent.APANoPhysgun
-
-					physStop(c.PhysObject)
-					physStop(c.HitEntity)
-
-					c.HitObject:EnableMotion(false)
-					
-					c.PhysObject:EnableMotion(false)
-					c.PhysObject:Sleep()
-					
-					ent:ForcePlayerDrop()
-					c.PhysObject:EnableMotion(not APA.Settings.FreezeOnHit:GetBool())
-
-					c.HitObject:EnableMotion(true)
-				else
-					timer.Simple(0.001, function()
-						if (c.OurOldVelocity:Length() > 95 or (IsValid(c.HitObject) and c.HitObject:GetVelocity():Length() > 75)) and not APA.IsWorld(c.HitEntity) then
-							APA.SetBadEnt(c.HitEntity,true)
-						end
-					end)
-				end
-			end
-		end
-		
-		if not ent.APAfCallback then
-			ent.APAfCallback = ent:AddCallback( "PhysicsCollide", ent.APAtCallback )
-		end
-
-		if not table.HasValue(APABadEnts, ent) then
- 			table.insert(APABadEnts, ent)
- 		end
-	elseif ent and ent.APAt and type(ent.APAt) == 'table' then
-		log('[BadEntity]',ent,' is now a GOOD entity!') if APA.Settings.Debug:GetInt() > 0 then ent:SetColor(Color(255,255,255)) end
-		
-		ent.APAt = nil
-		ent:SetNWBool("APABadEntity", false)
-
-		timer.Simple(3, function() if IsValid(ent) then ent.APANoPhysgun = nil end end)
-		table.RemoveByValue(APABadEnts, ent)
-	end
-end
-
-function APA.IsEntBad(ent)
-	if ent and ent.APAt then return ent.APAt["block entity"] end
-	return ent:GetNWBool("APABadEntity", false)
-end
-
-timer.Create("APABaddieFinder", 0.33, 0, function() 
-	for k,v in next, APABadEnts do
-		timer.Simple(k/100, function() 
-			if v and v.APAt and v.APAt.Think then
-				v.APAt.Think()
-			end
-		end)
-	end
-end)
-
 function APA.FindOwner( ent )
 	local owner, _ = ent:CPPIGetOwner()
 	return owner or ent.FPPOwner or nil -- Fallback to FPP variable if CPPI fails.
@@ -289,7 +202,6 @@ local function SpawnFilter(ply, model)
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		
 		if not APA.IsWorld( ent ) then
-			if not APA.Settings.Method:GetBool() then APA.SetBadEnt(ent,true) end
 			if APA.Settings.MaxMass:GetInt() >= 1 then
 				local phys = IsValid(ent) and ent:GetPhysicsObject()
 				if IsValid(phys) and phys:GetMass() > APA.Settings.MaxMass:GetInt() then phys:SetMass(APA.Settings.MaxMass:GetInt()) end
@@ -318,8 +230,6 @@ hook.Add( "PhysgunPickup", "APAIndex", function(ply,ent)
 		
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		ent.__APAPhysgunHeld[puid] = true
-
-		if not APA.Settings.Method:GetBool() and not ent.PhysgunDisabled then APA.SetBadEnt(ent,true) end
 	end
 end)
 
@@ -349,7 +259,7 @@ function APA.NoLag()
 	local k = 0
 	for _,v in next, ents.GetAll() do
 		if IsValid(v) and v.GetClass and table.HasValue(APA.Settings.L.Freeze, string.lower(v:GetClass())) then
-			if next(v.__APAPhysgunHeld) == nil then
+			if next(v.__APAPhysgunHeld or {}) == nil then
 				timer.Simple(k/100,function() -- Prevent possible crashes or lag on freeze sweep.
 					local v = v:GetPhysicsObject()
 					if IsValid(v) then v:EnableMotion(false) end
@@ -361,8 +271,9 @@ function APA.NoLag()
 end
 
 timer.Create("APAFreezePassive", 2.1, 0, function()
-	if not APA.Settings.FreezePassive:GetBool() then return end
-	APA.NoLag()
+	if APA.Settings.FreezePassive:GetBool() then
+		APA.NoLag()
+	end
 end)
 
 hook.Add( "OnPhysgunReload", "APAMassUnfreeze", function(gun,ply)

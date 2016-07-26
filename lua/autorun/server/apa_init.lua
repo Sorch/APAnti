@@ -2,6 +2,11 @@ if not SERVER then return end if CLIENT then return end
 APA = (APA and APA.Settings) and APA or {Settings = {}} -- Do not remove.
 local defaults = defaults or {}
 
+local RunConsoleCommand = RunConsoleCommand
+local cvars = cvars
+local timer = timer
+local hook = hook
+
 APA.Settings = {
 	--- Base AntiPK ---
 	AntiPK 					= {1, "Setting this to 1 will enable Anti Prop Kill."},
@@ -29,7 +34,7 @@ APA.Settings = {
 	FreezeOnUnghost			= {1, "Setting this to 1 will freeze props when they unghost."},
 	FreezePassive			= {0, "Setting this to 1 will freeze props passivly."},
 	--- Ghosting ---
-	GhostPickup 			= {0, "Setting this to 1 will enable ghost props on pickup."},
+	GhostPickup 			= {0, "Setting this to 1 will enable ghosting props on pickup."},
 	GhostSpawn				= {0, "Setting this to 1 will enable ghosting on spawn."},
 	GhostFreeze				= {0, "Setting this to 1 will freeze ghosts."},
 	UnGhostPassive			= {0, "Setting this to 1 will passivly unghost props. (Needs AntiPush.)"},
