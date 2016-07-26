@@ -107,6 +107,7 @@ hook.Add("PostGamemodeLoaded", "APAntiLOAD", function()
 		MsgC( Color(255, 0, 0), "\n\n---------------------------------------------------------------") 
 		MsgC( Color( 255, 0, 0 ), "\n| [APA] ERROR: CPPI not found, Prop Protection not installed? |")
 		MsgC( Color(255, 0, 0), "\n---------------------------------------------------------------\n")
+		MsgC( Color(255, 0, 0), "\nYou need any CPPI based prop protection installed. (FPP, PatchProtect, UPS, etc.)\n")
 		ErrorNoHalt("[APA] CPPI not found, APAnti will be heavily limited.")  MsgN("\n") 
 	end
 
