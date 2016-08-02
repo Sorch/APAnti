@@ -11,10 +11,12 @@ local hook = hook
 local _G = _G
 
 function APA.SetBadEnt(ent,bool)
-	local phys = IsValid(ent) and ent:GetPhysicsObject()
+	local phys = IsValid(ent) and ent.GetPhysicsObject and ent:GetPhysicsObject()
+	phys = IsValid(phys) and phys
 
 	if bool then
-		if not phys:IsMotionEnabled() then return end -- Don't apply on frozen entities.
+		if not IsValid(phys) then return end -- Entities need physics to work with this.
+		if phys:IsMotionEnabled() then return end -- Don't apply on frozen entities.
 
 		log('[BadEntity]',ent,' is now a BAD entity!') if APA.Settings.Debug:GetInt() > 0 then ent:SetColor(Color(255,0,0)) end
 
