@@ -107,10 +107,15 @@ local function DamageFilter( target, d ) -- d for damage info.
 		log('[Damage]3) Checking Entity',v,'Is Good: '..tostring(good),'Is Fall: '..tostring(d:IsFallDamage()))
 		log('[Damage]4) Checking Entity',v,'Is Flagged:',v:GetNWBool("APABadEntity", false))
 
+		if APA.WeaponCheck(attacker, inflictor) then return end
+		if APA.Settings.BlockExplosionDamage:GetBool() and isexplosion then return true end
+
+		if APA.Settings.BlockVehicleDamage:GetBool() and isvehicle then
+			physStop(v)
+			return true 
+		end
+
 		if (bad or (APA.Settings.BlockPropDamage:GetBool() and propdmg)) and not (good or d:IsFallDamage()) then
-			if APA.WeaponCheck(attacker, inflictor) then return end
-			if APA.Settings.BlockVehicleDamage:GetBool() and isvehicle then return true end
-			if APA.Settings.BlockExplosionDamage:GetBool() and isexplosion then return true end
 			if APA.Settings.BlockWorldDamage:GetBool() and inflictor == 'worldspawn' then return true end
 			if APA.Settings.AntiPK:GetBool() and not isvehicle and not isexplosion then 
 				d:SetDamage(0) d:ScaleDamage(0) d:SetDamageForce(Vector(0,0,0))
@@ -221,9 +226,13 @@ local function SpawnFilter(ply, model)
 		end
 	end
 
-	if IsValid(ent) then
-		if APA.Settings.NoCollideVehicles:GetBool() and ent:IsVehicle() then ent:SetCollisionGroup(COLLISION_GROUP_WEAPON) return end
-	end
+	timer.Simple(0.001, function()
+		if IsValid(ent) then
+			if APA.Settings.NoCollideVehicles:GetBool() and ent:IsVehicle() then 
+				ent:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+			end
+		end
+	end)
 end
 hook.Add( "OnEntityCreated", "APAntiSpawns", SpawnFilter)
 
