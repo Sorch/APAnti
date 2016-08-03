@@ -83,7 +83,7 @@ local function DamageFilter( target, d ) -- d for damage info.
 	local isexplosion = d:IsExplosionDamage()
 
 	local targetClass = IsValid(target) and target.GetClass and target:GetClass() or nil
-	if string.find(string.lower(targetClass), "prop_") == 1 then return APA.Settings.UnbreakableProps:GetBool() end
+	if string.find(string.lower(targetClass), "prop_") == 1 and APA.Settings.UnbreakableProps:GetBool() then return false end
 
 	for _,v in next, dents do
 		local propdmg = (v.GetClass and (string.find(string.lower(v:GetClass()), "prop_") == 1))
@@ -107,15 +107,16 @@ local function DamageFilter( target, d ) -- d for damage info.
 		log('[Damage]3) Checking Entity',v,'Is Good: '..tostring(good),'Is Fall: '..tostring(d:IsFallDamage()))
 		log('[Damage]4) Checking Entity',v,'Is Flagged:',v:GetNWBool("APABadEntity", false))
 
-		if APA.WeaponCheck(attacker, inflictor) then return end
-		if APA.Settings.BlockExplosionDamage:GetBool() and isexplosion then return true end
+		if APA.Settings.OnlyPlayers and not isPlayer(target) and not v.APAForceBlock then return end
 
+		if APA.WeaponCheck(attacker, inflictor) then return end
 		if APA.Settings.BlockVehicleDamage:GetBool() and isvehicle then
 			physStop(v)
 			return true 
 		end
 
 		if (bad or (APA.Settings.BlockPropDamage:GetBool() and propdmg)) and not (good or d:IsFallDamage()) then
+			if APA.Settings.BlockExplosionDamage:GetBool() and isexplosion then return true end
 			if APA.Settings.BlockWorldDamage:GetBool() and inflictor == 'worldspawn' then return true end
 			if APA.Settings.AntiPK:GetBool() and not isvehicle and not isexplosion then 
 				d:SetDamage(0) d:ScaleDamage(0) d:SetDamageForce(Vector(0,0,0))
@@ -233,7 +234,7 @@ local function SpawnFilter(ply, model)
 			end
 			if APA.Settings.BlockVehicleDamage:GetBool() and not ent.APAVehicleCollision then
 				ent.APAVehicleCollision = function(ent, c)
-					if APA.Settings.BlockVehicleDamage:GetBool() then return end
+					if not APA.Settings.BlockVehicleDamage:GetBool() then return end
 					physStop(c.PhysObject)
 					physStop(c.HitEntity)
 					c.PhysObject:Sleep()
