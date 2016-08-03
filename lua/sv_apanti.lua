@@ -227,9 +227,18 @@ local function SpawnFilter(ply, model)
 	end
 
 	timer.Simple(0.001, function()
-		if IsValid(ent) then
-			if APA.Settings.NoCollideVehicles:GetBool() and ent:IsVehicle() then 
+		if IsValid(ent) and ent:IsVehicle() then
+			if APA.Settings.NoCollideVehicles:GetBool() then 
 				ent:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+			end
+			if APA.Settings.BlockVehicleDamage:GetBool() and not ent.APAVehicleCollision then
+				ent.APAVehicleCollision = function(ent, c)
+					if APA.Settings.BlockVehicleDamage:GetBool() then return end
+					physStop(c.PhysObject)
+					physStop(c.HitEntity)
+					c.PhysObject:Sleep()
+				end
+				ent:AddCallback( "PhysicsCollide", ent.APAVehicleCollision )
 			end
 		end
 	end)
