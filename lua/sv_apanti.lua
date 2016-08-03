@@ -83,7 +83,7 @@ local function DamageFilter( target, d ) -- d for damage info.
 	local isexplosion = d:IsExplosionDamage()
 
 	local targetClass = IsValid(target) and target.GetClass and target:GetClass() or nil
-	if string.find(string.lower(targetClass), "prop_") == 1 and APA.Settings.UnbreakableProps:GetBool() then return false end
+	if string.find(string.lower(targetClass), "prop_") == 1 and APA.Settings.UnbreakableProps:GetBool() then return true end
 
 	for _,v in next, dents do
 		local propdmg = (v.GetClass and (string.find(string.lower(v:GetClass()), "prop_") == 1))
