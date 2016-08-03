@@ -1,7 +1,7 @@
-if not APA.hasCPPI then return false end -- Must Have CPPI
+if (not APA.hasCPPI) or (not APA.FindOwner) then return false end -- Must Have CPPI
 
-local table = table
 local APGhosts = {}
+local hook, table, ents, timer, IsValid = hook, table, ents, timer, IsValid
 
 function APA.GhostIsTrap(ent)
 	local mins, maxs, check = ent:OBBMins(), ent:OBBMaxs(), false
@@ -16,8 +16,8 @@ function APA.GhostIsTrap(ent)
 	check = APA.isPlayer(trace.Entity) and trace.Entity or false
 
 	if check then return check end
-
 	local pos = ent and ent:GetPos()
+
 	tr = {
 		start = pos, 
 		endpos = pos, 
@@ -31,9 +31,7 @@ function APA.GhostIsTrap(ent)
 
 	if check then return check end
 
-	local cube = ents.FindInBox( ent:LocalToWorld(mins), ent:LocalToWorld(maxs) )
-
-	for _,v in pairs(cube) do
+	for _,v in pairs(ents.FindInBox( ent:LocalToWorld(mins), ent:LocalToWorld(maxs) )) do
 		if APA.isPlayer(v) or (v.IsNPC and v:IsNPC()) or (v.IsBot and v:IsBot()) then
 			if not ent.APAIsObscured then
 				ent.APAIsObscured = v
@@ -52,7 +50,9 @@ function APA.CheckGhost( ent )
 	if ent.GetVelocity and ent:GetVelocity():Distance( Vector( 0.01, 0.01, 0.01 ) ) > 0.15 then return false end
 	local trap = IsTrap(ent)
 	if trap then
-		if APA.Settings.AntiPush:GetBool() then APA.Notify(owner, "Cannot UnGhost: Prop Obstructed! (See Console)", NOTIFY_ERROR, 4, 0, {ent:GetModel(),tostring(trap).."("..trap:GetModel()..")"}) end
+		if APA.Settings.GhostPickup:GetBool() and not APA.Settings.UnGhostPassive:GetBool() then 
+			APA.Notify(owner, "Cannot UnGhost: Prop Obstructed! (See Console)", NOTIFY_ERROR, 4, 0, {ent:GetModel(),tostring(trap).."("..trap:GetModel()..")"})
+		end
 		return false 
 	end
 	return IsValid(ent)
@@ -71,13 +71,27 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 		local collision = (collision or APA.Settings.GhostsNoCollide:GetBool()) and COLLISION_GROUP_WORLD or COLLISION_GROUP_WEAPON
 		local unghost = ghostoff and APA.CheckGhost(ent) or false
 
-		local ghostspawn, antipush, ghostfreeze = APA.Settings.GhostSpawn:GetBool(), APA.Settings.AntiPush:GetBool(), APA.Settings.GhostFreeze:GetBool()
+		if ent.ForcePlayerDrop and ent.FPPAntiSpamIsGhosted then 
+			DropEntityIfHeld(ent)
+			ent:ForcePlayerDrop()
+			
+			timer.Simple(0.001, function()
+				if IsValid(ent) then
+					DropEntityIfHeld(ent)
+					ent:ForcePlayerDrop()
+				end
+			end)
+			
+			unghost = false
+		end
+
+		local ghostspawn, GhostPickup, ghostfreeze = APA.Settings.GhostSpawn:GetBool(), APA.Settings.GhostPickup:GetBool(), APA.Settings.GhostFreeze:GetBool()
 		local freezeonunghost = APA.Settings.FreezeOnUnghost:GetBool()
 
-		ent.APGhost = APA.Settings.AntiPush:GetBool() or nil
+		ent.APGhost = APA.Settings.GhostPickup:GetBool() or nil
 		ent:DrawShadow(unghost)
 
-		if unghost or (ghostoff and ghostspawn and not antipush) then
+		if unghost or (ghostoff and ghostspawn and not GhostPickup) then
 			ent:SetRenderMode(RENDERMODE_NORMAL)
 
 			if ent.OldColor then ent:SetColor(Color(ent.OldColor.r, ent.OldColor.g, ent.OldColor.b, ent.OldColor.a)) end
@@ -95,7 +109,7 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 
 			ent.OldCollisionGroup = nil
 			ent.APGhost = nil
-		elseif antipush or ghostspawn then
+		elseif GhostPickup or ghostspawn then
 			DropEntityIfHeld(ent)
 
 			local oColGroup = ent:GetCollisionGroup()
@@ -118,21 +132,22 @@ function APA.InitGhost( ent, ghostoff, nofreeze, collision, forcefreeze )
 
 		if ent.APGhost then table.insert(APGhosts, ent) else table.RemoveByValue(APGhosts, ent) end
 
-		if antipush then
+		if GhostPickup then
 			for _,x in next, constraint.GetAllConstrainedEntities(ent) do
 				for _,v in next, (x.__APAPhysgunHeld or {}) do 
-					if v then nofreeze = true break end 
+					if v then nofreeze = true break end
 				end
 			end
 
 			for i = 0, ent:GetPhysicsObjectCount() - 1 do
 				local subphys = ent:GetPhysicsObjectNum( i )
-				if ( IsValid( subphys ) ) then
-					local canfreeze = ((unghost and freezeonunghost) or ghostfreeze) and subphys:IsMotionEnabled()
-					if (canfreeze and not nofreeze) or forcefreeze then subphys:EnableMotion(false) end
-					psleep(unghost,ent,subphys)
-					timer.Simple(0.001, function() psleep(unghost,ent,subphys) end)
-				end
+				timer.Simple(i/1000,function()
+					if ( IsValid( subphys ) ) then
+						local canfreeze = ((unghost and freezeonunghost) or ghostfreeze) and subphys:IsMotionEnabled()
+						if (canfreeze and not nofreeze) or forcefreeze then subphys:EnableMotion(false) end
+						psleep(unghost,ent,subphys)   timer.Simple(0.001, function() psleep(unghost,ent,subphys) end)
+					end
+				end)
 			end
 		end
 
@@ -150,27 +165,46 @@ function APA.GetGhosts()
 	return APGhosts or {}
 end
 
-function APA.IsSafeToGhost(ply,ent)
-	local good, bad, ugly = APA.EntityCheck(IsValid(ent) and ent.GetClass and ent:GetClass() or '')	
-	return (IsValid(ply) and IsValid(ent)) and ((not good) or bad) and (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and 
-	not (ent:IsVehicle() or ent:IsWeapon() or ent:IsPlayer() or ent:IsNPC() or APA.IsWorld(ent)) and 
-	not (ent.GetClass and ent:GetClass() == "prop_ragdoll")
+function APA.IsSafeToGhost(p,ent)
+	if not p then return end
+
+	local ply = (IsValid(p) and (p.IsPlayer and p:IsPlayer())) and p or nil
+	local ent = IsValid(p) and not ply and p or ent
+
+	local good, bad, ugly = APA.EntityCheck( (IsValid(ent) and ent.GetClass) and ent:GetClass() or '' )
+	bad = APA.Settings.Method:GetBool() and bad or APA.IsEntBad(ent)
+
+	if ply and ent then
+		ent = (ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply)) and ent or nil
+	end
+
+	return IsValid(ent) and ((not good) and bad) and
+	not (ent:IsVehicle() or ent:IsWeapon() or APA.IsWorld(ent)) and 
+	not (ent.GetClass and ent:GetClass() == "prop_ragdoll") and true or false
 end
+
 local IsSafeToGhost = APA.IsSafeToGhost
 
 local function CallGhost(ent, ghostoff, nofreeze)
+	local i = 0
 	for _,v in next, constraint.GetAllConstrainedEntities(ent) do
-		local valid = IsValid(v)
-		local phys = valid and v.GetPhysicsObject and v:GetPhysicsObject()
+		timer.Simple(i/100, function()
+			local valid = IsValid(v)
+			local phys = valid and v.GetPhysicsObject and v:GetPhysicsObject()
 
-		if valid and ent == v or ( v.OldCollisionGroup or v.APGhost ) or phys:IsMotionEnabled() then
-			APA.InitGhost(v, ghostoff, nofreeze)
-		end
+			if valid and ent == v or ( v.OldCollisionGroup or v.APGhost ) or phys:IsMotionEnabled() then
+				APA.InitGhost(v, ghostoff, nofreeze)
+			end
+		end)
+		i = i + 1
 	end
 end
 
 hook.Add( "PhysgunPickup", "APAntiPickup", function(ply,ent)
-	if APA.Settings.AntiPush:GetBool() and IsSafeToGhost(ply,ent) then
+	if APA.Settings.GhostPickup:GetBool() then
+		if not APA.Settings.Method:GetBool() and not ent.PhysgunDisabled then APA.SetBadEnt(ent,true) end
+		if not IsSafeToGhost(ply,ent) then return end
+
 		local puid = tostring(ply:UniqueID())
 		local pickup = CallGhost(ent, false, true)
 
@@ -187,7 +221,7 @@ hook.Add("PhysgunDrop", "APAntiDrop", function(ply,ent)
 		
 		timer.Simple(freezing and 0 or 1, function()
 			if IsValid(ent) and ent.__APAPhysgunHeld then
-				if table.Count(ent.__APAPhysgunHeld) <= 0 then
+				if next(ent.__APAPhysgunHeld) == nil then
 					CallGhost(ent, true, false)
 				end
 			end
@@ -201,15 +235,17 @@ local function DontPickupGhosts(ply,ent) if ent.APGhost then return false end en
 hook.Add("CanPlayerUnfreeze","APADontPickupGhosts", DontPickupGhosts)
 hook.Add("AllowPlayerPickup","APADontPickupGhosts", DontPickupGhosts)
 
-timer.Create("APAUnGhostPassive", (math.pi-1), 0, function()
+timer.Create("APAUnGhostPassive", 1.23, 0, function()
 	if not APA.Settings.UnGhostPassive:GetBool() then return end
+	local i = 0
 	for _,v in next, APA.GetGhosts() do
 		if IsValid(v) and v.APGhost then
-			for _,v in next, constraint.GetAllConstrainedEntities(v) do
-				if table.Count(v.__APAPhysgunHeld or {}) == 0 and v.APGhost then
+			i = i + 1
+			timer.Simple(i/100, function()
+				if IsValid(v) and next(v.__APAPhysgunHeld) == nil and v.APGhost and IsSafeToGhost(v) then
 					APA.InitGhost(v, true, false)
 				end
-			end
+			end)
 		end
 	end
 end)
@@ -217,15 +253,23 @@ end)
 hook.Add( "OnEntityCreated", "APAntiGhostSpawn", function(ent)
 	timer.Simple(0, function()
 		local ply = APA.FindOwner(ent)
-		if APA.Settings.GhostSpawn:GetBool() and IsValid(ply) and IsSafeToGhost(ply,ent) then
-			APA.InitGhost(ent, false, false, true, true)
+		if APA.Settings.GhostSpawn:GetBool() and IsValid(ply) then
+
+			if not APA.Settings.Method:GetBool() then
+				APA.SetBadEnt(ent,true)
+			end
+
+			if IsSafeToGhost(ply,ent) then
+				APA.InitGhost(ent, false, false, true, true)
+			end
+
 		end
 	end)
 end)
 
 hook.Add("PlayerUnfrozeObject", "APAntiGhostR", function(ply,ent,phys)
 	timer.Simple(0, function()
-		if APA.Settings.AntiPush:GetBool() and IsValid(ply) and IsSafeToGhost(ply,ent) then
+		if APA.Settings.GhostPickup:GetBool() and IsValid(ply) and IsSafeToGhost(ply,ent) then
 			APA.InitGhost(ent, false, true)
 			timer.Simple(0, function() if IsValid(phys) then phys:Wake() end end)
 		end
