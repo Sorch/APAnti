@@ -18,6 +18,7 @@ APA.Settings = {
 	BlockPropDamage 		= {0, "Setting this to 1 will always block \"prop_\" damage."},
 	KillOwnership 	 		= {0, "Setting this to 1 will reward kills for \"prop_\" damage based on the props owner. (Warning: Due to possible entropy this may not be accurate!)"},
 	Method 					= {0, "Setting this to 1 will use the Blacklist, setting it to 0 will predict."},
+	OnlyPlayers 			= {0, "Setting this to 1 will block damage on players only."},
 	PropsOnly 				= {0, "Setting this to 1 will effect only \"prop_\" classes."},
 	BadTime 				= {0.15, "How long (in seconds) does an entity have to wait to become \"good\" and be able to do damage again. (Minimum is 0.15)"},
 	--- Prop Control ---
