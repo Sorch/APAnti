@@ -1,8 +1,11 @@
-local APAWorldEnts = APAWorldEnts or {}
 local hook, table, print, ents, timer, IsValid = hook, table, print, ents, timer, IsValid
 local tostring = tostring
 
-if #APAWorldEnts <= 0 then timer.Simple(0.001, function() for _,v in next, ents.GetAll() do table.insert( APAWorldEnts, v ) end end) end
+hook.Add( "InitPostEntity", "APAPostEntity", function()
+	timer.Simple(0.001, function() -- Delay so we are the last call.
+		APA.PostEntity = true
+	end)
+end)
 
 function APA.log(tag,...)
 	if APA.Settings.Debug:GetInt() <= 0 then return end
@@ -195,15 +198,22 @@ local function ModelFilter(mdl) -- Return true to block model.
 end
 
 function APA.IsWorld( ent )
+	if not IsValid(ent) then return true end
 	local iw = ent.IsWorld and ent:IsWorld()
-	
-	if (not APA.FindOwner(ent)) or (not (IsValid(ent) or iw)) or (not ent.GetClass) or ent.NoDeleting or ent.jailWall or isPlayer(ent) or
-		(ent.IsNPC and ent:IsNPC()) or (ent.IsBot and ent:IsBot()) or ent.PhysgunDisabled or ( ent.CreatedByMap and ent:CreatedByMap() ) or
-		(ent.GetPersistent and ent:GetPersistent()) or table.HasValue(APAWorldEnts, ent) then return true end
+
+	if iw then return true end
+	if not ent.APAMem then return true end
+	if (ent.GetPersistent and ent:GetPersistent()) then return true end
+	if not APA.FindOwner(ent) then return true end
+	if (not ent.GetClass) then return true end
+	if ent.PhysgunDisabled or ent.NoDeleting or ent.jailWall then return true end
+	if ent.CreatedByMap and ent:CreatedByMap() then return true end
+	if isPlayer(ent) or (ent.IsNPC and ent:IsNPC()) then return true end
+	-- Instant break points for faster usage.
 
 	local blacklist = {"func_", "env_", "info_", "predicted_", "chatindicator", "prop_door_"}
 	local ec = string.lower(ent:GetClass())
-	for _,v in pairs(blacklist) do
+	for _,v in next, blacklist do
 		if string.find( ec, string.lower(v) ) then
 			return true
 		end
@@ -212,19 +222,13 @@ function APA.IsWorld( ent )
 	return false
 end
 
+
 local function SpawnFilter(ply, model)
 	local ent = not ply:IsPlayer() and ply or nil
 	local model = model and APA.ModelNameFix( model )
 
 	if ent then 
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
-		
-		if not APA.IsWorld( ent ) then
-			if APA.Settings.MaxMass:GetInt() >= 1 then
-				local phys = IsValid(ent) and ent:GetPhysicsObject()
-				if IsValid(phys) and phys:GetMass() > APA.Settings.MaxMass:GetInt() then phys:SetMass(APA.Settings.MaxMass:GetInt()) end
-			end
-		end
 	end
 
 	timer.Simple(0.001, function()
@@ -246,6 +250,33 @@ local function SpawnFilter(ply, model)
 end
 hook.Add( "OnEntityCreated", "APAntiSpawns", SpawnFilter)
 
+local function PlayerSpawnFilter(ply, model, ent)
+	local ent = isentity(model) and model or ent
+	hook.Run("APA.PlayerSpawnedObject", ply, ent) -- A nice hook for others. So they don't have to spam hook.Add like I did.
+
+	ent.APAMem = ent.APAMem or {}
+
+	local settings_maxmass = APA.Settings.MaxMass:GetInt() >= 1
+	local settings_propsnocollide = APA.Settings.PropsNoCollide:GetInt() >= 1
+
+	if settings_propsnocollide or settings_maxmass then
+		local phys = IsValid(ent) and ent:GetPhysicsObject()
+		if IsValid(phys) then
+			ent.APAMem.Collision = COLLISION_GROUP_NONE -- Predicted.
+			if settings_maxmass and phys:GetMass() > APA.Settings.MaxMass:GetInt() then phys:SetMass(APA.Settings.MaxMass:GetInt()) end
+			if settings_propsnocollide then ent:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS) end
+		end
+	end
+end
+
+local hookall = {
+	"PlayerSpawnedEffect", 	"PlayerSpawnedNPC",
+	"PlayerSpawnedProp", 	"PlayerSpawnedRagdoll",
+	"PlayerSpawnedSENT", 	"PlayerSpawnedSWEP",
+	"PlayerSpawnedVehicle", -- The hooks we want to bind.
+}
+for _,v in next, hookall do hook.Add(v, "APAntiSpawned", PlayerSpawnFilter) end
+
 hook.Add( "PlayerSpawnObject", "APAntiSpawns", function(ply,mdl) if mdl and ModelFilter(mdl) then return false end end)
 hook.Add( "AllowPlayerPickup", "APAntiPickup", function(ply,ent) 
 	local good, bad, ugly = ent.GetClass and APA.EntityCheck(ent:GetClass())
@@ -261,6 +292,14 @@ hook.Add( "PhysgunPickup", "APAIndex", function(ply,ent)
 		
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		ent.__APAPhysgunHeld[puid] = true
+
+		if APA.Settings.PropsNoCollide:GetInt() >= 1 then
+			local collision = ent:GetCollisionGroup()
+			ent.APAMem.Collision = (collision == COLLISION_GROUP_INTERACTIVE_DEBRIS) and COLLISION_GROUP_NONE or collision
+			if collision == COLLISION_GROUP_NONE then 
+				ent:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS) 
+			end
+		end
 	end
 end)
 
@@ -282,6 +321,12 @@ hook.Add( "PhysgunDrop", "APANoThrow", function(ply,ent)
 	end
 	if (IsValid(ply) and IsValid(ent)) and ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply) and ent.__APAPhysgunHeld then
 		ent.__APAPhysgunHeld[tostring(ply:UniqueID())] = nil
+	end
+end)
+
+hook.Add("OnPhysgunFreeze", "APAPhysgunFreeze", function(_, phys, ent, ply)
+	if (IsValid(ply) and IsValid(ent)) and ent.APAMem and ent.APAMem.Collision then
+		ent:SetCollisionGroup(ent.APAMem.Collision)
 	end
 end)
 

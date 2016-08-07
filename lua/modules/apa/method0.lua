@@ -8,13 +8,12 @@ local physStop = APA.physStop
 local IsValid = IsValid
 local timer = timer
 local hook = hook
-local _G = _G
 
-function APA.SetBadEnt(ent,bool)
+function APA.SetBadEnt(ent,bool,ignorefrozen)
 	local phys = IsValid(ent) and ent.GetPhysicsObject and ent:GetPhysicsObject()
 
 	if bool then
-		if IsValid(phys) and not phys:IsMotionEnabled() then return end -- Don't apply on frozen entities.
+		if (not ignorefrozen) and IsValid(phys) and not phys:IsMotionEnabled() then return end -- Don't apply on frozen entities.
 
 		log('[BadEntity]',ent,' is now a BAD entity!') if APA.Settings.Debug:GetInt() > 0 then ent:SetColor(Color(255,0,0)) end
 
@@ -54,6 +53,15 @@ function APA.SetBadEnt(ent,bool)
 		end
 
 		ent.APAtCallback = function(ent, c)
+			local speed = c.OurOldVelocity:Length()
+
+			if speed < 8.4 then return end
+			if speed > 1000 then
+				c.HitEntity:SetPos(c.HitEntity:GetPos())
+				c.HitObject:SetPos(c.HitObject:GetPos())
+				c.HitObject:SetVelocityInstantaneous(Vector())
+			end
+
 			if IsValid(ent) and type(ent.APAt) == "table" then
 
 				ent.APAt["time stamp"] = CurTime()+0.15
@@ -68,12 +76,13 @@ function APA.SetBadEnt(ent,bool)
 
 					ent:ForcePlayerDrop()
 					c.PhysObject:EnableMotion(not APA.Settings.FreezeOnHit:GetBool())
+					c.PhysObject:SetVelocityInstantaneous(Vector(0,0,c.PhysObject:GetMass()*1.1))
 					c.PhysObject:Sleep()
 				end
 				
 				if not isPlayer(c.HitEntity) then
 					timer.Simple(0.01, function()
-						if (c.OurOldVelocity:Length() > 95 or (IsValid(c.HitObject) and c.HitObject:GetVelocity():Length() > 75)) and not APA.IsWorld(c.HitEntity) then
+						if (speed > 95 or (IsValid(c.HitObject) and c.HitObject:GetVelocity():Length() > 75)) and not APA.IsWorld(c.HitEntity) then
 							if not ( c.HitEntity:GetNWBool("APABadEntity", false) ) then 
 								APA.SetBadGroup(c.HitEntity,true)
 							else 
@@ -153,13 +162,11 @@ if APA.hasCPPI and APA.FindOwner then
 
 	hook.Add( "PhysgunPickup", "APAMethod0", function(ply,ent)
 		if (IsValid(ply) and IsValid(ent)) and ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply) then
-
 			timer.Simple(0.001, function() -- Wierd hook order stuff.
 				if not APA.Settings.Method:GetBool() and not ent.PhysgunDisabled and IsValid(ent) then
 					APA.SetBadGroup(ent,true)
 				end
 			end)
-
 		end
 	end)
 
