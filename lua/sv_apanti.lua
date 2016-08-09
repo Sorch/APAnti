@@ -293,7 +293,7 @@ hook.Add( "PhysgunPickup", "APAIndex", function(ply,ent)
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		ent.__APAPhysgunHeld[puid] = true
 
-		if APA.Settings.PropsNoCollide:GetInt() >= 1 then
+		if APA.Settings.PropsNoCollide:GetInt() >= 1 and ent.APAMem then
 			local collision = ent:GetCollisionGroup()
 			ent.APAMem.Collision = (collision == COLLISION_GROUP_INTERACTIVE_DEBRIS) and COLLISION_GROUP_NONE or collision
 			if collision == COLLISION_GROUP_NONE then 
