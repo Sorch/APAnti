@@ -183,9 +183,9 @@ if APA.hasCPPI and APA.FindOwner then
 		end
 	end)
 
-	hook.Add( "CanTool", "APAMethod0", function(ply, tr, mode)
+	hook.Add( "CanTool", "APAMethod0", function(ply, tr)
 		local ent = tr.Entity
-		if (IsValid(ply) and IsValid(ent)) and ent.CPPICanTool and ent:CPPICanTool(ply, mode) then
+		if (IsValid(ply) and IsValid(ent)) and ent.CPPICanTool and ent:CPPICanTool(ply) then
 			timer.Simple(0.01, function() -- Wierd hook order stuff.
 				if not APA.Settings.Method:GetBool() and not ent.PhysgunDisabled and IsValid(ent) then
 					APA.SetBadGroup(ent,true)
