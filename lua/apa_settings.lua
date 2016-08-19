@@ -29,10 +29,10 @@ local APA_Settings = {
     FreezePassive           = {0, "Setting this to 1 will freeze props passivly."},
     --- Ghosting ---
     GhostPickup             = {0, "Setting this to 1 will enable ghosting props on pickup."},
-    GhostSpawn              = {0, "Setting this to 1 will enable ghosting on spawn."},
+    GhostSpawn              = {1, "Setting this to 1 will enable ghosting on spawn."},
     GhostFreeze             = {0, "Setting this to 1 will freeze ghosts."},
     UnGhostPassive          = {0, "Setting this to 1 will passivly unghost props. (Needs AntiPush.)"},
-    GhostsNoCollide         = {0, "Setting this to 1 will make ghosts nocollide with everything."},
+    GhostsNoCollide         = {1, "Setting this to 1 will make ghosts nocollide with everything."},
 }
 
 return APA_Settings
