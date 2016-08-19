@@ -25,14 +25,15 @@ do
 			tr = {
 				start = pos, 
 				endpos = pos, 
-				filter = ent,
-				ignoreworld = true,
+				filter = ent
 			}
 
 			trace = util.TraceEntity( tr, ent )
 			local tre = trace.Entity
 			check = IsValid(tre) and (not isFrozen(tre)) and tre or check
 		end
+
+		if APA.isPlayer(check) then return check end
 
 		if check or not pos then
 			local found = {}
@@ -145,8 +146,9 @@ function APA.CheckGhost( ent )
 
 	if ent.GetVelocity and ent:GetVelocity():Distance( Vector( 0.01, 0.01, 0.01 ) ) > 0.15 then return false end -- Are we moving?
 	local trap = IsTrap(ent)
+
 	if IsValid(trap) then
-		if APA.Settings.GhostPickup:GetBool() and not APA.Settings.UnGhostPassive:GetBool() then 
+		if (APA.Settings.GhostSpawn:GetBool() or APA.Settings.GhostPickup:GetBool()) and not APA.Settings.UnGhostPassive:GetBool() then 
 			APA.Notify(owner, "Cannot UnGhost: Prop Obstructed! (See Console)", NOTIFY_ERROR, 4, 0, {ent:GetModel(),tostring(trap).."("..trap:GetModel()..")"})
 		end
 		return false 
@@ -189,8 +191,7 @@ function APA.InitGhost( ent, ghostoff, freeze, collision, forced)
 		ent.APGhost = APA.Settings.GhostPickup:GetBool() or nil
 		ent:DrawShadow(unghost)
 
-		if unghost or (ghostoff and ghostspawn and not GhostPickup) then
-			
+		if unghost and (ghostoff or ghostspawn) then			
 			if ent.OldColor then 
 				if ent.OldColor.a == 255 then ent:SetRenderMode(RENDERMODE_NORMAL) end
 				ent:SetColor(Color(ent.OldColor.r, ent.OldColor.g, ent.OldColor.b, ent.OldColor.a))
