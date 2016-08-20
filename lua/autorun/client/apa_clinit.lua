@@ -1,11 +1,5 @@
 local function escape(s) return tostring(s):gsub( "%%", "<p>" ) end
 
-local mat = CreateMaterial( "APAGhostMaterial", "VertexLitGeneric", {
-	["$basetexture"] = "models/debug/debugwhite", ["$model"] = 1, 
-	["$color"] = "{ 0 0 0 }", ["$alpha"] = "0.72",
-	["$color2"] = "{ 0 0 0 }"
-});
-
 local NoticeMaterial = NoticeMaterial or {}
 NoticeMaterial[ NOTIFY_GENERIC ]	= Material( "vgui/notices/generic" )
 NoticeMaterial[ NOTIFY_ERROR ]		= Material( "vgui/notices/error" )
@@ -13,12 +7,9 @@ NoticeMaterial[ NOTIFY_UNDO ]		= Material( "vgui/notices/undo" )
 NoticeMaterial[ NOTIFY_HINT ]		= Material( "vgui/notices/hint" )
 NoticeMaterial[ NOTIFY_CLEANUP ]	= Material( "vgui/notices/cleanup" )
 
-local baramount = 0
 local function Notify( text, type, time )
 	local bars = vgui.Create( "DPanel" )
 	local l = (string.len(text)*10)+42
-
-	baramount = baramount < 3 and (baramount + 1) or 1
 
 	bars:SetPos(ScrW()+l, 20)
 	bars:SetSize(l, 40)
@@ -50,11 +41,9 @@ local function Notify( text, type, time )
 	img:SizeToContents()
 
 	-- surface.PlaySound("buttons/lightswitch2.wav")
-	local pos = baramount > 1 and (20+(21*baramount)) or 20
-	bars:MoveTo(ScrW()-l, pos, 0.7, 0, -1, function()
-		bars:MoveTo(ScrW()+300, pos, 0.5, time, -1, function() 
+	bars:MoveTo(ScrW()-l, 20, 0.7, 0, -1, function()
+		bars:MoveTo(ScrW()+300, 20, 0.5, time, -1, function() 
 			bars:Remove()
-			baramount = baramount > 0 and (baramount - 1) or 0
 		end)
 	end)
 end

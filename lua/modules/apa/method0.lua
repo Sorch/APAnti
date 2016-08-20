@@ -120,19 +120,6 @@ function APA.SetBadEnt(ent,bool,ignorefrozen)
 	end
 end
 
-hook.Add("StartCommand", "APAAnnoySurf2", function(ply, mv)
-	if not APA.Settings.AnnoySurf:GetBool() then return end
-	local wep = isPlayer(ply) and ply:GetActiveWeapon()
-	if IsValid(wep) and wep:GetClass() == "weapon_physgun" then
-		local phys = ply:GetPhysicsObject()
-		if ply:IsOnGround() and IsValid(phys) and phys:GetVelocity():Distance(Vector()) > 500 then
-			mv:RemoveKey(IN_ATTACK)
-			local pos = ply:GetPos()
-			timer.Simple(0, function() if IsValid(ply) then ply:SetPos(pos) end end)
-		end
-	end
-end)
-
 function APA.SetBadGroup(ent,bool)
 	local i = 0
 	local isvalid = function(v) return IsValid(v) and not v.PhysgunDisabled end
@@ -183,9 +170,9 @@ if APA.hasCPPI and APA.FindOwner then
 		end
 	end)
 
-	hook.Add( "CanTool", "APAMethod0", function(ply, tr)
+	hook.Add( "CanTool", "APAMethod0", function(ply, tr, mode)
 		local ent = tr.Entity
-		if (IsValid(ply) and IsValid(ent)) and ent.CPPICanTool and ent:CPPICanTool(ply) then
+		if (IsValid(ply) and IsValid(ent)) and ent.CPPICanTool and ent:CPPICanTool(ply, mode) then
 			timer.Simple(0.01, function() -- Wierd hook order stuff.
 				if not APA.Settings.Method:GetBool() and not ent.PhysgunDisabled and IsValid(ent) then
 					APA.SetBadGroup(ent,true)

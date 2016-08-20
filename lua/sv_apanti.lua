@@ -2,7 +2,7 @@ local hook, table, print, ents, timer, IsValid = hook, table, print, ents, timer
 local tostring = tostring
 
 hook.Add( "InitPostEntity", "APAPostEntity", function()
-	timer.Simple(0.1, function() -- Delay so we are the last call.
+	timer.Simple(0.001, function() -- Delay so we are the last call.
 		APA.PostEntity = true
 	end)
 end)
@@ -247,22 +247,12 @@ local function SpawnFilter(ply, model)
 			end
 		end
 	end)
-	timer.Simple(0.01, function()
-		if APA.PostEntity and IsValid(ent) and ent ~= Entity(0) and APA.FindOwner(ent) then
-			if not ent.APAMem then
-				ent.APAMem = {}
-				if APA.Settings.PropsNoCollide:GetInt() >= 1 and not APA.InitGhost() then
-					ent:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
-					ent:CollisionRulesChanged()
-				end
-			end
-		end
-	end)
 end
 hook.Add( "OnEntityCreated", "APAntiSpawns", SpawnFilter)
 
 local function PlayerSpawnFilter(ply, model, ent)
 	local ent = isentity(model) and model or ent
+	hook.Run("APA.PlayerSpawnedObject", ply, ent) -- A nice hook for others. So they don't have to spam hook.Add like I did.
 
 	ent.APAMem = ent.APAMem or {}
 
@@ -277,8 +267,6 @@ local function PlayerSpawnFilter(ply, model, ent)
 			if settings_propsnocollide then ent:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS) end
 		end
 	end
-
-	hook.Run("APA.PlayerSpawnedObject", ply, ent) -- A nice hook for others. So they don't have to spam hook.Add like I did.
 end
 
 local hookall = {
@@ -305,25 +293,12 @@ hook.Add( "PhysgunPickup", "APAIndex", function(ply,ent)
 		ent.__APAPhysgunHeld = ent.__APAPhysgunHeld or {}
 		ent.__APAPhysgunHeld[puid] = true
 
-		if APA.Settings.PropsNoCollide:GetInt() >= 1 and ent.APAMem and not APA.Settings.GhostPickup:GetBool() then
+		if APA.Settings.PropsNoCollide:GetInt() >= 1 and ent.APAMem then
 			local collision = ent:GetCollisionGroup()
 			ent.APAMem.Collision = (collision == COLLISION_GROUP_INTERACTIVE_DEBRIS) and COLLISION_GROUP_NONE or collision
 			if collision == COLLISION_GROUP_NONE then 
 				ent:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS) 
 			end
-		end
-	end
-end)
-
-function APA.isFrozen(ent)
-	local phys = ent.GetPhysicsObject and IsValid(ent:GetPhysicsObject()) and ent:GetPhysicsObject()
-	return not (phys and phys:IsMotionEnabled())
-end
-
-hook.Add("APA.SetCollisionGroup", "APANoCollide", function(ent, collision)
-	if IsValid(ent) and APA.Settings.PropsNoCollide:GetInt() >= 1 and ent.APAMem then
-		if collision == COLLISION_GROUP_NONE and not APA.isFrozen(ent) then
-			return COLLISION_GROUP_INTERACTIVE_DEBRIS
 		end
 	end
 end)
@@ -346,9 +321,6 @@ hook.Add( "PhysgunDrop", "APANoThrow", function(ply,ent)
 	end
 	if (IsValid(ply) and IsValid(ent)) and ent.CPPICanPhysgun and ent:CPPICanPhysgun(ply) and ent.__APAPhysgunHeld then
 		ent.__APAPhysgunHeld[tostring(ply:UniqueID())] = nil
-		if APA.Settings.PropsNoCollide:GetInt() >= 1 and ent.APAMem and not APA.Settings.GhostPickup:GetBool() then
-			ent:SetCollisionGroup(COLLISION_GROUP_NONE)
-		end
 	end
 end)
 
@@ -358,29 +330,6 @@ hook.Add("OnPhysgunFreeze", "APAPhysgunFreeze", function(_, phys, ent, ply)
 	end
 end)
 
-function APA.killvel(ent,freeze)
-	if not IsValid(ent) then return end
-
-	if ent.SetVelocity then
-		ent:SetVelocity( vector_origin )
-	end
-	
-	for i = 0, ent:GetPhysicsObjectCount() - 1 do
-		local subphys = ent:GetPhysicsObjectNum( i )
-		if ( IsValid( subphys ) ) then
-			subphys:SetVelocity(vector_origin)
-			subphys:SetVelocityInstantaneous(vector_origin)
-			subphys:AddAngleVelocity(subphys:GetAngleVelocity()*-1)
-			if freeze then
-				subphys:EnableMotion(false)
-				subphys:Sleep()
-			end
-			subphys:RecheckCollisionFilter() -- Make Sure It Knows
-		end
-	end
-	
-	ent:CollisionRulesChanged()
-end
 
 function APA.NoLag()
 	local k = 0
@@ -388,7 +337,8 @@ function APA.NoLag()
 		if IsValid(v) and v.GetClass and table.HasValue(APA.Settings.L.Freeze, string.lower(v:GetClass())) then
 			if next(v.__APAPhysgunHeld or {}) == nil then
 				timer.Simple(k/100,function() -- Prevent possible crashes or lag on freeze sweep.
-					APA.killvel(v,true)
+					local v = v:GetPhysicsObject()
+					if IsValid(v) then v:EnableMotion(false) end
 				end)
 				k = k + 1
 			end
